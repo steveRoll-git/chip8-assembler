@@ -1,4 +1,17 @@
-require "stringExtension"
+local function trim(str)
+  return (str:gsub("^%s*", ""):gsub("%s*$", ""))
+end
+
+local function split(inputstr, sep) -- https://stackoverflow.com/questions/1426954/split-string-in-lua#comment73602874_7615129
+  local t={}
+  if inputstr == "" then return t end
+  for field,s in string.gmatch(inputstr, "([^"..sep.."]*)("..sep.."?)") do
+    table.insert(t,trim(field))
+    if s=="" then
+      return t
+    end
+  end
+end
 
 local crlf = true
 
@@ -144,7 +157,7 @@ local function assemble(code)
       local address = arg
       
       if arg:find("+") then
-        local V, addr = unpack(arg:split("+"))
+        local V, addr = unpack(split(arg, "+"))
         if addr == "V0" then
           V, addr = addr, V
         end
@@ -484,8 +497,8 @@ local function assemble(code)
     end
   }
   
-  for _, line in ipairs(code:split("\n")) do
-    line = line:trim()
+  for _, line in ipairs(split(code, "\n")) do
+    line = trim(line)
     line = line:sub(1, (line:find(";") or 0) - 1)
     line = transformString(line)
     
@@ -505,7 +518,7 @@ local function assemble(code)
         local space = line:find(" ")
         if not space then syntaxError() end
         local directive = line:sub(2, space - 1)
-        local args = line:sub(space + 1):split(",")
+        local args = split(line:sub(space + 1), ",")
         
         if directive == "byte" then
           if #args < 1 then asmError("byte directive expected byte") end
@@ -549,14 +562,14 @@ local function assemble(code)
       elseif line:find("=") then
         --symbol definition
         local eq = line:find("=")
-        local name = line:sub(1, eq - 1):trim()
-        local value = line:sub(eq + 1):trim()
+        local name = trim(line:sub(1, eq - 1))
+        local value = trim(line:sub(eq + 1))
         addSymbol(name, parseNumber(value))
         
       elseif line:find(":") then
         --label
         local colon = line:find(":")
-        local name = line:sub(1, colon - 1):trim()
+        local name = trim(line:sub(1, colon - 1))
         addSymbol(name, currentAddr)
         
       else
@@ -571,7 +584,7 @@ local function assemble(code)
           asmError("unknown instruction '" .. instr .. "'")
         end
         
-        local args = line:sub(spaceB + 1):split(",")
+        local args = split(line:sub(spaceB + 1), ",")
         
         instructions[instr](args)
         
